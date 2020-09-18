@@ -1,31 +1,4 @@
 <?php
-/*
- * # Jackhole
- * ### A self-writing PHP script which stores HTTP requests
- * 
- * ## Install
- * 1) Drop this file somewhere in the webserver's document root.
- * 2) Access the endpoint once to initialize the script
- * 
- * A random password is generated on first access. It gives access to the
- * admin page. However, nothing is encrypted ! All data is appended at the
- * end of the script file, base64 encoded.
- * 
- * Despite it's self-writing/reading behavior, this script is packable
- * (ie. eval(base64_decode("..."))) but `__FILE__` superglobal has to be
- * parsed manually because it's different from the value returned in
- * `eval()`'d context.
- * ```php
- * eval(str_replace('__FILE__', "'".__FILE__."'", "..."));
- * ``` 
- * 
- * # @TODO
- * - Export admin session
- * - Customize redirection
- * - Show $_FILES MIME type & content
- * - Auto-pack
- */
-
 class Jackhole {
   public $redir = 'https://www.google.com/';
   public $hash;
