@@ -20,7 +20,8 @@ class Jackhole {
         $this->admin();
       } else {
         array_unshift($this->requests, $this->info());
-        header("Location: $this->redir", true);
+        header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
+        //header("Location: $this->redir", true);
         echo "<script>document.location='$this->redir';</script>";
       }
     } else {
@@ -42,7 +43,7 @@ class Jackhole {
       }
       unset($headers['Cookie']);
     }
-    return [
+    $request = [
       'client' => [
         'ip' => $_SERVER['REMOTE_ADDR'],
         'port' => $_SERVER['REMOTE_PORT']
@@ -55,16 +56,24 @@ class Jackhole {
       'body' => array_merge($_POST, $_FILES),
       'time' => $_SERVER['REQUEST_TIME_FLOAT']
     ];
+
+    if (!count($request['body'])) {
+      $request['body'] = file_get_contents('php://input');
+    }
+
+    return $request;
   }
 
   public function render($data, $output = 'json', $pretty = true) {
     if ($output == 'json') {
-      $rendered = json_encode($data, JSON_PRETTY_PRINT);
+      $rendered = json_encode(json_decode($data), JSON_PRETTY_PRINT);
     } else {
       ob_start();
       var_export($data);
       $rendered = ob_get_clean();
     }
+
+    $rendered = '<code>' . htmlentities($rendered) . '</code>';
   
     if ($pretty) {
       $rendered = '<pre>' . $rendered . '</pre>';
@@ -124,10 +133,11 @@ class Jackhole {
 ?>
 <html>
 <head>
-    <title>🕳&nbsp;Jackhole</title>
+    <title>Jackhole</title>
     <link rel="stylesheet" href="https://unpkg.com/chota@latest">
+    <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48dGV4dCB5PSIuOWVtIiBmb250LXNpemU9IjkwIj7wn5WzPC90ZXh0Pjwvc3ZnPg==">
     <style>
-      .content,input.toggle{display:none}.request{font-size:1.4rem;}.content{background:#222;border-bottom:1px solid var(--border-color);overflow-x:auto}.content table tbody th{padding-left:2rem;width:15rem}input.toggle:checked+.request>.row{background:#444}input.toggle:checked+.request+.content{display:block}.text-ellipsis{text-overflow:ellipsis;overflow:hidden;white-space:nowrap}body.dark{--bg-color:#222;--bg-secondary-color:#131316;--font-color:#f5f5f5;--color-grey:#ccc;--color-darkGrey:#777}label.request>.row{padding-top:.6rem;cursor:pointer;transition:background .3s}label.request>.row:hover{background:#333}tbody.small th,tbody.small td{padding:.6rem .2rem}.bd-orange{border-color:#f5b042}.bd-blue{border-color:#3bb8ed}.bd-purple{border-color:#a62dd6}.button{padding:.5rem}.actions .button{margin-left:.5rem}.small{font-size:.8em;}
+      .content,input.toggle{display:none}.request{font-size:1.4rem;}.content{background:#222;border-bottom:1px solid var(--border-color);overflow-x:auto}.content table tbody th{padding-left:2rem;width:15rem}input.toggle:checked+.request>.row{background:#444}input.toggle:checked+.request+.content{display:block}.text-ellipsis{text-overflow:ellipsis;overflow:hidden;white-space:nowrap}body.dark{--bg-color:#222;--bg-secondary-color:#131316;--font-color:#f5f5f5;--color-grey:#ccc;--color-darkGrey:#777}label.request>.row{padding-top:.6rem;cursor:pointer;transition:background .3s}label.request>.row:hover{background:#333}tbody.small th,tbody.small td{padding:.6rem .2rem}.bd-orange{border-color:#f5b042}.bd-blue{border-color:#3bb8ed}.bd-purple{border-color:#a62dd6}.button{padding:.5rem}.actions .button{margin-left:.5rem}.small{font-size:.8em;}pre code{white-space: pre-wrap;}
     </style>
 </head>
 <body class="dark">
@@ -155,13 +165,11 @@ class Jackhole {
 <div class="row">
   <div class="col">
     <h2>Requests</h2>
+      <div id="requests">
 <?php
     if (count($this->requests) == 0) {
       echo 'No requests ...';
     } else {
-?>
-      <div id="requests">
-<?php
       foreach ($this->requests as $i => $request) {
         $cls = '';
         $colors = [
@@ -210,9 +218,23 @@ class Jackhole {
         $args = ['cookies', 'params', 'body'];
         foreach ($args as $arg) {
           if (count($request[$arg])) {
-            echo '<tr><th colspan="100%" class="text-center bd-dark">' . ucfirst($arg) . '</th></tr>';
-            foreach ($request[$arg] as $key => $value)
-              echo "<tr><th>$key</th><td><code>$value</code></td></tr>";
+            echo '<tr>'.
+              '<th colspan="100%" class="text-center bd-dark">'.
+                ucfirst($arg).
+              '</th>'.
+            '</tr>';
+            if (is_array($request[$arg])) {
+              foreach ($request[$arg] as $key => $value) {
+                echo '<tr>'.
+                  "<th>$key</th>".
+                  '<td>' . $this->render($value) . '</td>'.
+                "</tr>";
+              }
+            } else {
+              echo '<tr><td colspan="2">'.
+                $this->render($request[$arg]).
+              '</td></tr>';
+            }
           }
         }
 ?>
